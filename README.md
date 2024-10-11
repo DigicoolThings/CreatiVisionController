@@ -22,6 +22,16 @@ For more information about this project, including the MECB based CreatiVision r
 
 This project is available as either the PCB only, or with optional Packs (to make a Kitset), from my [Tindie Store](https://www.tindie.com/stores/digicoolthings/).
 
-[![CreatiVision re-Creation (Part 2) - CreatiVision Controller interface](https://img.youtube.com/vi/F0uOjKrhjYw/0.jpg)](https://www.youtube.com/watch?v=F0uOjKrhjYw)
-
 This work is licensed under GNU General Public License v3.0
+
+
+YouTube CreatiVision re-Creation series (Part 1) - CreatiVision re-Creation via MECB
+[![CreatiVision re-Creation (Part 1) -  CreatiVision re-Creation](https://img.youtube.com/vi/ydSRfFl1JVY/0.jpg)](https://www.youtube.com/watch?v=ydSRfFl1JVY)
+
+
+YouTube CreatiVision re-Creation series (Part 2) - CreatiVision Controller intro (v1.2)
+[![CreatiVision re-Creation (Part 2) - CreatiVision Controller interface v1.2](https://img.youtube.com/vi/F0uOjKrhjYw/0.jpg)](https://www.youtube.com/watch?v=F0uOjKrhjYw)
+
+
+YouTube CreatiVision re-Creation series (Part 3) - CreatiVision Controller update (v2.0)
+[![CreatiVision re-Creation (Part 3) - CreatiVision Controller interface v2.0](https://img.youtube.com/vi/8bqtkbsaBD8/0.jpg)](https://www.youtube.com/watch?v=8bqtkbsaBD8)
