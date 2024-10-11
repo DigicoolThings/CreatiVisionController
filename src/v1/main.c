@@ -1,20 +1,20 @@
 /*
  * CreatiVision Controller Interface 
  * ---------------------------------
- * 
+ *
  * This work is licensed under GNU General Public License v3.0
  * 
- * Version: 2.0
+ * Version: 1.0
+ * 
+ * Copyright 2024 by DigicoolThings
  * 
  * Author:  Greg@DigicoolThings.com            
- * Date: October 2024
+ * Date: August 2024
  * 
  * Controller Interface for CreatiVision Consoles and CreatiVision re-Creations.
  * 
- * v1.x was written for 28 pin AVR DA series. 
+ * Written for 28 pin AVR DA series. 
  * e.g. AVR32DA28, AVR64DA128, AVR128DA28
- * v2.x was written for 28 pin AVR EA series. 
- * e.g. AVR32EA28, AVR64EA128, AVR128EA28
  * 
  * Utilizes MT8816 8 x 16 Analog Switch Array
  *  for CreatiVision key-switch function replication.
@@ -45,23 +45,12 @@
  *  legends), or utilize a custom key-cap PS/2 keyboard.
  * 
  * Code was developed in MPLAB X v6.20
- * MCC is used to generate code for AVR device settings, as below.
- * 
- * For v1.x (AVR DA series):
+ * MCC is used to generate code for AVR device settings:
  *  - Internal 4MHz clock (default)
  *  - Reset Pin (PF6) set to "Reset mode"
  *  - Global Interrupt Enabled
  *  - PA0 - PA7 GPIO defined as Outputs
  *  - PC0 - PC3, PD0 - PD7, PF0 - PF1 GPIO defined as Inputs,
- *          with Pull-ups enabled
- *  - PF0 (PS2_Clock_bm) - Input Sense Interrupt = "Sense Falling Edge"
- * 
- * For v2.x (AVR EA series):
- *  - Reset Pin (PF6) set to "No External Reset"
- *  - UPDI Pin (PF7) set to "GPIO"
- *  - Global Interrupt Enabled
- *  - PA0 - PA7 GPIO defined as Outputs
- *  - PC0 - PC3, PD0 - PD7, PF0 - PF1, PF6 - PF7 GPIO defined as Inputs,
  *          with Pull-ups enabled
  *  - PF0 (PS2_Clock_bm) - Input Sense Interrupt = "Sense Falling Edge"
  *     
@@ -72,9 +61,8 @@
  * 
  * Change Log
  * ----------
- * v1.0 - Initial release (v1.0 supports PCB v1.x only).
- * v2.0 - Support for Atari 7800 Joysticks, automatic Joystick type detection,
- *        change to AVR "EA" series (v2.0 supports PCB v2.x only).    
+ * v1.0  - Initial release.
+ * 
  *    
  */
 #include "mcc_generated_files/system/system.h"
@@ -107,17 +95,6 @@ static const uint8_t PS2_Data_bm = PIN1_bm;
  */
 static const uint8_t MT_Strobe_bm = PIN6_bm;
 static const uint8_t MT_Data_bm   = PIN7_bm;
-
-/*
- * Global Joystick Type indicators
- * 
- * These are updated by the readJoystick functions to indicate which
- * Joystick Type has been detected:
- * 0 = Original Atari Joystick (or compatible)
- * 1 = Atari 7800 2 Button Joystick (or compatible)
- */
-static uint8_t Joystick_Left_Type = 0;
-static uint8_t Joystick_Right_Type = 0;
 
 /*
  * MT8816 AY0-2 / AX0-3 Address Input definitions for CreatiVision Controllers
@@ -498,7 +475,6 @@ static const uint8_t Switch_JoyR_Button1 = PIA_PA2 | PIA_PB7;
 /** Button 2 - Pin 9 + Pin 8 (PIA_PA3 -> PIA_PB7) */
 static const uint8_t Switch_JoyR_Button2 = PIA_PA3 | PIA_PB7;
 
-
 /**
  * MT8816_Switch turns the Addressed Switch ON or OFF (switchState true/false)
  * NOTE: We also address here (in software) the MT8816 illogical truth table!
@@ -549,72 +525,38 @@ static inline void MT8816_Reset(void)
 }
 
 /**
- *  Left Joystick uses PORTD PIN1 - PIN7
+ *  Left Joystick uses PORTD PIN2 - PIN7
  *  PORTD definitions:
  *  PIN2 = Up
  *  PIN3 = Down
  *  PIN4 = Left
  *  PIN5 = Right
- 
- *  PIN6 = Button (DB9 Pin 6)
- *  PIN7 = Button Right (DB9 Pin 5)
- *  PIN1 = Button Left (DB9 Pin 9)
-
- * 
+ *  PIN6 = Button 1
+ *  PIN7 = Button 2
+ *
  * Read Left Joystick
- * Returns 0 if no Joystick switches are engaged (all switches are off)
- * else 0b0BBBRLDU
+ * Returns 0 if no Joystick actions are engaged (all switches are off)
+ * else 0b00BBRLDU
  * Specifically:
- *  Up           = 0b0xxxxxxU
- *  Down         = 0b0xxxxxDx
- *  Left         = 0b0xxxxLxx
- *  Right        = 0b0xxxRxxx
-
- *  Button       = 0b0xxBxxxx
- *  Button Right = 0b0xBxxxxx  
- *  Button Left  = 0b0Bxxxxxx  
+ *  Up           = 0b00xxxxxU
+ *  Down         = 0b00xxxxDx
+ *  Left         = 0b00xxxLxx
+ *  Right        = 0b00xxRxxx
+ *  Button 1     = 0b00xBxxxx
+ *  Button 2     = 0b00Bxxxxx  
  */
 static inline uint8_t readJoystick_Left(void)
 {
-    uint8_t joyVal;
-    uint8_t joyVal_ExtraButtons;
+    uint8_t joyValD;
     
-    /* Get inverted PORT input (so 1 is Switch ON) */
-    joyVal = ~(PORTD.IN);
-    /* Default the Extra Right & Left Buttons from our initial read */
-    joyVal_ExtraButtons = joyVal;
+    joyValD = ~(PORTD.IN) & 0xFC;
     
-    /* Check if Atari 7800 Controller - Button Right & Left always both ON */
-    if ((joyVal_ExtraButtons & 0x82) == 0x82)   // Atari 7800 Controller 
-    {
-        /* For Atari 7800 output high on DB9 Pin 6 to read Extra Buttons */
-        PORTD.DIRSET = PIN6_bm;
-        PORTD.OUTSET = PIN6_bm;
-        /* Intentionally set here, to allow Port to settle before read! */
-        Joystick_Left_Type = 1;
-        /* re-read Joystick to get Button Right & Left (1 is ON) */
-        joyVal_ExtraButtons = PORTD.IN;
-        /* Return to Input on DB9 Pin 6 */
-        PORTD.OUTCLR = PIN6_bm;
-        PORTD.DIRCLR = PIN6_bm;
-    } else
-    {
-        Joystick_Left_Type = 0;
-    }    
-    
-    /* Mask and align Standard DB9 Joystick Switch values */
-    joyVal &= 0x7C;
-    joyVal >>= 2;
-
-    /* Add Button Right & Left values */
-    if (joyVal_ExtraButtons & 0x80) joyVal |= 0x20;
-    if (joyVal_ExtraButtons & 0x02) joyVal |= 0x40;
-    
-    return joyVal;
+    joyValD = joyValD >> 2;
+    return joyValD;
 }
 
 /**
- *  Right Joystick uses PORTC PIN0 - PIN3 and PORTD PIN0 and PORTF PIN6 - PIN7
+ *  Right Joystick uses PORTC PIN0 - PIN3 and PORTD PIN0 - PIN1
  *  PORTC definitions:
  *  PIN0 = Up
  *  PIN1 = Down
@@ -622,68 +564,30 @@ static inline uint8_t readJoystick_Left(void)
  *  PIN3 = Right
  * 
  *  PORTD definitions:
- *  PIN0 = Button (DB9 Pin 6)
- * 
- *  PORTF definitions:
- *  PIN7 = Button Right (DB9 Pin 5)
- *  PIN6 = Button Left (DB9 Pin 9)
+ *  PIN0 = Button 1
+ *  PIN1 = Button 2
  *
  * Read Right Joystick
- * Returns 0 if no Joystick switches are engaged (all switches are off)
- * else 0b0BBBRLDU
+ * Returns 0 if no Joystick actions are engaged (all switches are off)
+ * else 0b00BBRLDU
  * Specifically:
- *  Up           = 0b0xxxxxxU
- *  Down         = 0b0xxxxxDx
- *  Left         = 0b0xxxxLxx
- *  Right        = 0b0xxxRxxx
-
- *  Button       = 0b0xxBxxxx
- *  Button Right = 0b0xBxxxxx  
- *  Button Left  = 0b0Bxxxxxx  
+ *  Up           = 0b00xxxxxU
+ *  Down         = 0b00xxxxDx
+ *  Left         = 0b00xxxLxx
+ *  Right        = 0b00xxRxxx
+ *  Button 1     = 0b00xBxxxx
+ *  Button 2     = 0b00Bxxxxx  
  */
 static inline uint8_t readJoystick_Right(void)
 {
-    uint8_t joyVal;
-    uint8_t joyVal_ExtraButtons;
     uint8_t joyValC;
     uint8_t joyValD;
-    uint8_t joyValF;
 
-    /* Get inverted PORT input (so 1 is Switch ON) */
     joyValC = ~(PORTC.IN) & 0x0F;
-    joyValD = ~(PORTD.IN) & 0x01;
-    joyValF = ~(PORTF.IN) & 0xC0;
-    /* Normalize to single byte joyVal! */
-    joyVal = joyValC | (joyValD << 4) | joyValF;
-    /* Default the Extra Right & Left Buttons from our initial read */
-    joyVal_ExtraButtons = joyVal;
+    joyValD = ~(PORTD.IN) & 0x03;
     
-    /* Check if Atari 7800 Controller - Button Right & Left always both ON */
-    if ((joyVal_ExtraButtons & 0xC0) == 0xC0)   // Atari 7800 Controller 
-    {
-        /* For Atari 7800 output high on DB9 Pin 6 to read Extra Buttons */
-        PORTD.DIRSET = PIN0_bm;
-        PORTD.OUTSET = PIN0_bm;
-        /* Intentionally set here, to allow Port to settle before read! */
-        Joystick_Right_Type = 1;
-        /* re-read Joystick to get Button Right & Left (1 is ON) */
-        joyVal_ExtraButtons = PORTF.IN;
-        /* Return to Input on DB9 Pin 6 */
-        PORTD.OUTCLR = PIN0_bm;
-        PORTD.DIRCLR = PIN0_bm;
-    } else
-    {
-        Joystick_Right_Type = 0;
-    }    
-
-    /* Mask Standard DB9 Joystick Switch values */
-    joyVal &= 0x1F;
-
-    /* Add Button Right & Left values */
-    if (joyVal_ExtraButtons & 0x80) joyVal |= 0x20;
-    if (joyVal_ExtraButtons & 0x40) joyVal |= 0x40;
-    
-    return joyVal;
+    joyValD = joyValD << 4;
+    return joyValC | joyValD;
 }
 
 /*
@@ -696,48 +600,27 @@ static inline uint8_t readJoystick_Right(void)
 static inline void process_Joystick_Left(void)
 {
     static uint8_t joyLeft_prev = 0;
-    
+
     uint8_t joyLeft = readJoystick_Left();
-    
+
     if (joyLeft != joyLeft_prev)
     {
-       
-        if (Joystick_Left_Type == 1)   // Atari 7800 Controller 
+        if (joyLeft & 0x10) 
         {
-            if (joyLeft & 0x20)
-            {
-                MT8816_Switch(true, Switch_JoyL_Button1);
-            } else 
-            {
-                MT8816_Switch(false, Switch_JoyL_Button1);
-            }   
-
-            if (joyLeft & 0x40) 
-            {
-                MT8816_Switch(true, Switch_JoyL_Button2);
-            } else 
-            {
-                MT8816_Switch(false, Switch_JoyL_Button2);
-            }   
-        } else // Atari Original Controller 
+            MT8816_Switch(true, Switch_JoyL_Button1);
+        } else 
         {
-            if (joyLeft & 0x10) 
-            {
-                MT8816_Switch(true, Switch_JoyL_Button1);
-            } else 
-            {
-                MT8816_Switch(false, Switch_JoyL_Button1);
-            }   
+            MT8816_Switch(false, Switch_JoyL_Button1);
+        }   
 
-            if ((joyLeft & 0x20) || (joyLeft & 0x40))  
-            {
-                MT8816_Switch(true, Switch_JoyL_Button2);
-            } else 
-            {
-                MT8816_Switch(false, Switch_JoyL_Button2);
-            }   
-        }    
-        
+        if (joyLeft & 0x20) 
+        {
+            MT8816_Switch(true, Switch_JoyL_Button2);
+        } else 
+        {
+            MT8816_Switch(false, Switch_JoyL_Button2);
+        }   
+
         switch(joyLeft & 0x0F)
         {
             case 0x01: /* Up */
@@ -850,42 +733,21 @@ static inline void process_Joystick_Right(void)
 
     if (joyRight != joyRight_prev)
     {
-       
-        if (Joystick_Right_Type == 1)   // Atari 7800 Controller 
+        if (joyRight & 0x10) 
         {
-            if (joyRight & 0x20)
-            {
-                MT8816_Switch(true, Switch_JoyR_Button1);
-            } else 
-            {
-                MT8816_Switch(false, Switch_JoyR_Button1);
-            }   
-
-            if (joyRight & 0x40) 
-            {
-                MT8816_Switch(true, Switch_JoyR_Button2);
-            } else 
-            {
-                MT8816_Switch(false, Switch_JoyR_Button2);
-            }   
-        } else // Atari Original Controller 
+            MT8816_Switch(true, Switch_JoyR_Button1);
+        } else 
         {
-            if (joyRight & 0x10) 
-            {
-                MT8816_Switch(true, Switch_JoyR_Button1);
-            } else 
-            {
-                MT8816_Switch(false, Switch_JoyR_Button1);
-            }   
+            MT8816_Switch(false, Switch_JoyR_Button1);
+        }   
 
-            if ((joyRight & 0x20) || (joyRight & 0x40))  
-            {
-                MT8816_Switch(true, Switch_JoyR_Button2);
-            } else 
-            {
-                MT8816_Switch(false, Switch_JoyR_Button2);
-            }   
-        }    
+        if (joyRight & 0x20) 
+        {
+            MT8816_Switch(true, Switch_JoyR_Button2);
+        } else 
+        {
+            MT8816_Switch(false, Switch_JoyR_Button2);
+        }   
 
         switch(joyRight & 0x0F)
         {
@@ -983,6 +845,7 @@ static inline void process_Joystick_Right(void)
         joyRight_prev = joyRight;
     }
 }
+
 
 /* 
  * get_PS2_ScanCode gets a Scan Code byte from the PS2_ScanCodeBuffer
