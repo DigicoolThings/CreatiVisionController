@@ -22,6 +22,9 @@ For more information about this project, including the MECB based CreatiVision r
 
 This project is available as either the PCB only, or with optional Packs (to make a Kitset), from my [Tindie Store](https://www.tindie.com/stores/digicoolthings/).
 
+A CreatiVision enthusiast, Jason (Mamejay), has also contributed his 3D Printed case design, which you find on Thingiverse, [here](https://www.thingiverse.com/thing:7382791). 
+
+
 This work is licensed under GNU General Public License v3.0
 
 
